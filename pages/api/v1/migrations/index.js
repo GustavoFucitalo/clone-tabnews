@@ -30,7 +30,7 @@ export default async function migrations(request, response) {
       return response.status(201).json(migratedMigrations); //POST migration pendente retorna 201
     }
 
-    return response.status(200).json(migratedMigrations); //Se não 200 OK
+    return response.status(404).json(migratedMigrations); //Se não 200 OK
   }
 
   return response.status(405).end();
