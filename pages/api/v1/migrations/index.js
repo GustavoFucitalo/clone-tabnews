@@ -28,12 +28,10 @@ export default async function migrations(request, response) {
 
     if (migratedMigrations.length > 0) {
       return response.status(201).json(migratedMigrations); //POST migration pendente retorna 201
-    } else if{
-      response.status(200).json(migratedMigrations); //Se não 200 OK
-  } else {
-    
-  }
+    }
+
+    return response.status(200).json(migratedMigrations); //Se não 200 OK
   }
 
-  return response.status(405).end();
+  return migratedMigrations.response.status(405).end();
 }
