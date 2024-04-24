@@ -3,37 +3,49 @@ import { join } from "node:path";
 import database from "infra/database.js";
 
 export default async function migrations(request, response) {
-  if (!(request.method === "GET" || request.method === "POST")) {
-    return response.status(405).end();
-  }
+ const allowedMethods = ["GET", "POST"];
+ if (!allowedMethods.includes(request.method)) {
+   return response.status(405).json({
+     error: `method "${request.method}" not allowed`,
+   });
+ }
 
-  const dbClient = await database.getNewClient();
-  const defaultMigrationsOptions = {
-    dbClient: dbClient,
-    dryRun: true,
-    dir: join("infra", "migrations"),
-    direction: "up",
-    verbose: true,
-    migrationsTable: "pgmigrations",
-  };
-  if (request.method === "GET") {
-    const pendingMigrations = await migrationRunner(defaultMigrationsOptions);
-    await dbClient.end();
-    return response.status(200).json(pendingMigrations);
-  }
+ let dbClient;
 
-  if (request.method === "POST") {
-    const migratedMigrations = await migrationRunner({
-      ...defaultMigrationsOptions,
-      dryRun: false,
-    });
+ try {
+   dbClient = await database.getNewClient();
+   const defaultMigrationsOptions = {
+     dbClient: dbClient,
+     dryRun: true,
+     dir: join("infra", "migrations"),
+     direction: "up",
+     verbose: true,
+     migrationsTable: "pgmigrations",
+   };
+   if (request.method === "GET") {
+     const pendingMigrations = await migrationRunner(defaultMigrationsOptions);
+     await dbClient.end();
+     return response.status(200).json(pendingMigrations);
+   }
 
-    await dbClient.end();
+   if (request.method === "POST") {
+     const migratedMigrations = await migrationRunner({
+       ...defaultMigrationsOptions,
+       dryRun: false,
+     });
 
-    if (migratedMigrations.length > 0) {
-      return response.status(201).json(migratedMigrations); //POST migration pendente retorna 201
-    }
+     await dbClient.end();
 
-    return response.status(200).json(migratedMigrations); //Se não 200 OK
-  }
+     if (migratedMigrations.length > 0) {
+       return response.status(201).json(migratedMigrations); //POST migration pendente retorna 201
+     }
+
+     return response.status(200).json(migratedMigrations); //Se não 200 OK
+   }
+ } catch (error) {
+   console.error(error);
+   throw error;
+ } finally {
+   dbClient.end();
+ }
 }
